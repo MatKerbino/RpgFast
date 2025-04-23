@@ -1,4 +1,5 @@
 import typing
+from pydantic import BaseModel
 
 if hasattr(typing.ForwardRef, "_evaluate"):
     original_evaluate = typing.ForwardRef._evaluate
@@ -8,7 +9,7 @@ if hasattr(typing.ForwardRef, "_evaluate"):
         return original_evaluate(self, globalns, localns, type_params, recursive_guard=recursive_guard)
     typing.ForwardRef._evaluate = patched_evaluate
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException, status, Query
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException, status, Query, Request, Body
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Dict, Optional, Any
 import json
@@ -27,6 +28,12 @@ from .routers import auth, characters, npcs, shared_items, shared_abilities, mas
 
 # Import WebSocket endpoint handler
 from .websocket_handler import websocket_endpoint
+
+# Add Pydantic model for login request body
+class LoginRequest(BaseModel):
+    nickname: str
+    master_code: Optional[str] = None
+    character_id: Optional[str] = None
 
 def datetime_serializer(obj):
     """JSON serializer for objects not serializable by default json code"""
@@ -98,7 +105,12 @@ async def shutdown_event():
 
 # Rotas da API
 @app.post("/api/login")
-async def login(nickname: str, master_code: Optional[str] = None, character_id: Optional[str] = None):
+async def login(request_data: LoginRequest = Body(...)):
+    # Access data from the request_data model
+    nickname = request_data.nickname
+    master_code = request_data.master_code
+    character_id = request_data.character_id
+
     if not nickname:
         return {"success": False, "error": "Nickname is required"}
 
@@ -108,8 +120,9 @@ async def login(nickname: str, master_code: Optional[str] = None, character_id: 
     if is_master:
         # Verificar se já existe um mestre
         users = await db.get_users()
-        if any(user.get("isMaster", False) for user in users):
-            return {"success": False, "error": "A game master already exists"}
+        for user in users:
+            if user.get("isMaster", True):
+                return {"success": True, "user": user}
 
         # Criar novo usuário mestre
         user_id = str(uuid.uuid4())
@@ -137,14 +150,7 @@ async def login(nickname: str, master_code: Optional[str] = None, character_id: 
 
             return {"user": user, "success": True}
         else:
-            # Criar novo personagem com o ID fornecido
-            user_id = str(uuid.uuid4())
-            await db.create_user(user_id, nickname, False, character_id)
-
-            # Obter o usuário criado
-            user = await db.get_user(user_id)
-
-            return {"user": user, "success": True}
+            return {"success": False, "error":"Jogador não encontrado."}
 
 @app.get("/api/users")
 async def get_users():
