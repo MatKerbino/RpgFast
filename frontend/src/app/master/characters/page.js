@@ -41,6 +41,7 @@ export default function MasterCharactersPage() {
   const [editedCharacter, setEditedCharacter] = useState(null)
   const [characterDetails, setCharacterDetails] = useState(null)
   const [newCharacterName, setNewCharacterName] = useState("")
+  const [newCharacterId, setNewCharacterId] = useState("")
   const [createCharacterError, setCreateCharacterError] = useState("")
   const [createCharacterSuccess, setCreateCharacterSuccess] = useState("")
   const [isCreatingCharacter, setIsCreatingCharacter] = useState(false)
@@ -327,6 +328,7 @@ export default function MasterCharactersPage() {
         onClose={() => {
           setShowCreateCharacterModal(false)
           setNewCharacterName("")
+          setNewCharacterId("")
           setCreateCharacterError("")
           setCreateCharacterSuccess("")
         }}
@@ -346,6 +348,32 @@ export default function MasterCharactersPage() {
               placeholder="Nome do personagem"
               disabled={isCreatingCharacter}
             />
+            <label
+              htmlFor="characterId"
+              className="block text-sm font-medium mb-1 text-foreground mt-4"
+            >
+              ID do Personagem (3 dígitos)
+            </label>
+            <input
+              id="characterId"
+              type="text"
+              value={newCharacterId}
+              onChange={(e) => {
+                // Só números, até 3 dígitos
+                const val = e.target.value.replace(/\D/g, '').slice(0, 3)
+                setNewCharacterId(val)
+              }}
+              className={`w-full px-3 py-2 rounded-md bg-background 
+                focus:outline-none focus:ring-1 focus:ring-accent text-foreground border ${
+                  newCharacterId.length === 0
+                    ? 'border-border'       // neutro quando vazio
+                    : newCharacterId.length < 3
+                      ? 'border-red-500'    // vermelho em 1–2 dígitos
+                      : 'border-green-500'  // verde em 3 dígitos
+                }`}
+              placeholder="123"
+              disabled={isCreatingCharacter}
+            />
           </div>
 
           {createCharacterError && <p className="text-red-500 text-sm">{createCharacterError}</p>}
@@ -356,6 +384,7 @@ export default function MasterCharactersPage() {
               onClick={() => {
                 setShowCreateCharacterModal(false)
                 setNewCharacterName("")
+                setNewCharacterId("")
                 setCreateCharacterError("")
                 setCreateCharacterSuccess("")
               }}
@@ -366,7 +395,11 @@ export default function MasterCharactersPage() {
             </button>
             <button
               onClick={handleCreateCharacter}
-              disabled={isCreatingCharacter || !newCharacterName.trim()}
+              disabled={
+                isCreatingCharacter ||
+                !newCharacterName.trim() ||
+                newCharacterId.length !== 3
+              }
               className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
             >
               {isCreatingCharacter ? "Criando..." : "Criar Personagem"}

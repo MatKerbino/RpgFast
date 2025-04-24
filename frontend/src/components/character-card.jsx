@@ -26,14 +26,13 @@ export default function CharacterCard({ character, isMaster, onEdit, onViewDetai
               >
                 Detalhes
               </button>
-              {character.isNpc && (
-                <button
-                  onClick={() => onDelete(character.id)}
-                  className="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-500 px-2 py-1 rounded"
-                >
-                  Excluir
-                </button>
-              )}
+              
+              <button
+                onClick={() => onDelete(character.id)}
+                className="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-500 px-2 py-1 rounded"
+              >
+                Excluir
+              </button>
             </>
           )}
         </div>
@@ -83,6 +82,12 @@ export default function CharacterCard({ character, isMaster, onEdit, onViewDetai
       {character.notes && (
         <div className="mt-2 text-sm border-t border-border pt-2">
           <p className="text-foreground/70">{character.notes}</p>
+        </div>
+      )}
+
+      {!character.isNpc && (
+        <div>
+          <p>{character.character_id}</p>
         </div>
       )}
     </div>
