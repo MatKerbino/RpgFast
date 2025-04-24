@@ -47,7 +47,7 @@ export function Modal({ isOpen, onClose, title, children }) {
 
   return createPortal(
     <div ref={overlayRef} className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="w-full max-w-md rounded-lg bg-card shadow-xl">
+      <div className="w-full max-w-md rounded-lg bg-card shadow-xl bg-black">
         <div className="flex items-center justify-between border-b border-border p-4">
           <h3 className="text-lg font-medium">{title}</h3>
           <button

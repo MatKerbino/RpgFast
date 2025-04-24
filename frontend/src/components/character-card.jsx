@@ -7,8 +7,13 @@ export default function CharacterCard({ character, isMaster, onEdit, onViewDetai
       className={`bg-card border ${character.isMaster ? "border-2 border-red-500" : character.isNpc ? "border-2 border-purple-500" : "border-border"} rounded-lg p-4`}
     >
       <div className="flex justify-between items-start mb-2">
-        <h3 className="font-bold text-lg">
+        <h3 className="font-bold text-lg flex items-center">
           {character.nickname} {character.isMaster && "(Mestre)"} {character.isNpc && "(NPC)"}
+          {isMaster && character.characterId && (
+            <span className="ml-2 text-xs font-mono bg-gray-700 text-gray-300 px-1.5 py-0.5 rounded">
+              ID: {character.characterId}
+            </span>
+          )}
         </h3>
         <div className="flex space-x-2">
           {isMaster && (
@@ -82,12 +87,6 @@ export default function CharacterCard({ character, isMaster, onEdit, onViewDetai
       {character.notes && (
         <div className="mt-2 text-sm border-t border-border pt-2">
           <p className="text-foreground/70">{character.notes}</p>
-        </div>
-      )}
-
-      {!character.isNpc && (
-        <div>
-          <p>{character.character_id}</p>
         </div>
       )}
     </div>

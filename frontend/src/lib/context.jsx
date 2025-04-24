@@ -113,7 +113,7 @@ export function AppProvider({ children }) {
   }
 
   // Adicionar a função createCharacter para permitir que o mestre crie personagens
-  const createCharacter = async (nickname) => {
+  const createCharacter = async (nickname, id) => {
     if (!currentUser || !currentUser.isMaster) {
       throw new Error("Apenas o mestre pode criar personagens")
     }
@@ -123,6 +123,7 @@ export function AppProvider({ children }) {
       const response = await axios.post(`${API_URL}/api/master/characters`, {
         master_id: currentUser.id,
         nickname: nickname,
+        character_id: id
       });
 
       const data = response.data;
@@ -130,6 +131,24 @@ export function AppProvider({ children }) {
     } catch (error) {
       console.error("Error creating character:", error)
       const errorMessage = error.response?.data?.detail || error.message || "Falha ao criar personagem"
+      throw new Error(errorMessage)
+    }
+  }
+
+  const deleteCharacter = async (id) => {
+    if (!currentUser || !currentUser.isMaster){
+      throw new Error("Apenas o mestre pode excluir personagens")
+    }
+
+    try {
+      const response = await axios.delete(`${API_URL}/api/master/characters/${id}`, {
+        master_id: currentUser.id
+      });
+      const data = response.data;
+      return data
+    } catch (error) {
+      console.error("Error deleting character:", error)
+      const errorMessage = error.response?.data?.detail || error.message || "Falha ao deletar personagem"
       throw new Error(errorMessage)
     }
   }
@@ -446,6 +465,7 @@ export function AppProvider({ children }) {
     sharedAbilities,
     login,
     createCharacter,
+    deleteCharacter,
     sendMessage,
     rollDice,
     updateCharacter,

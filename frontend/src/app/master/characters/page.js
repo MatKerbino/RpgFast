@@ -29,6 +29,7 @@ export default function MasterCharactersPage() {
     updateNpc,
     deleteNpc,
     createCharacter,
+    deleteCharacter
   } = useApp()
 
   const [selectedCharacter, setSelectedCharacter] = useState(null)
@@ -45,11 +46,12 @@ export default function MasterCharactersPage() {
   const [createCharacterError, setCreateCharacterError] = useState("")
   const [createCharacterSuccess, setCreateCharacterSuccess] = useState("")
   const [isCreatingCharacter, setIsCreatingCharacter] = useState(false)
+  const [deleteSuccessMessage, setDeleteSuccessMessage] = useState("");
 
   const [newNpc, setNewNpc] = useState({
     nickname: "",
-    healthPoints: 100,
-    maxHealthPoints: 100,
+    healthPoints: 10,
+    maxHealthPoints: 10,
     showHealthBar: true,
     healthBarColor: "green",
     showInChat: false,
@@ -105,6 +107,24 @@ export default function MasterCharactersPage() {
       maxHealthPoints: character.maxHealthPoints || 100,
     })
     setShowEditModal(true)
+  }
+
+  const handleDeleteCharacter = async (character) => {
+    if (!window.confirm(`Deseja realmente deletar o personagem "${character.nickname}" (ID: ${character.characterId})?`)) {
+      return;
+    }
+
+    try {
+      await deleteCharacter(character.characterId);
+
+      setDeleteSuccessMessage(`Personagem "${character.nickname}" (ID: ${character.characterId}) deletado com sucesso!`);
+
+      setTimeout(() => setDeleteSuccessMessage(""), 3000);
+
+    } catch (error) {
+      console.error("Erro ao deletar personagem:", error);
+      alert(`Falha ao excluir personagem: ${error.message}`);
+    }
   }
 
   const handleViewCharacterDetails = async (character) => {
@@ -198,13 +218,17 @@ export default function MasterCharactersPage() {
       setCreateCharacterError("Por favor, insira um nome para o personagem.")
       return
     }
+    if (!newCharacterId) {
+      setCreateCharacterError("Por favor, insira um id válido")
+      return
+    }
 
     setIsCreatingCharacter(true)
     setCreateCharacterError("")
     setCreateCharacterSuccess("")
 
     try {
-      const result = await createCharacter(newCharacterName)
+      const result = await createCharacter(newCharacterName, newCharacterId)
 
       if (result && result.success && result.user) {
         setCreateCharacterSuccess(
@@ -273,7 +297,7 @@ export default function MasterCharactersPage() {
                   onEdit={handleEditCharacter}
                   onViewDetails={handleViewCharacterDetails}
                   onRollDice={handleRollDiceForCharacter}
-                  onDelete={() => {}}
+                  onDelete={handleDeleteCharacter}
                 />
               ))}
             </div>
@@ -284,6 +308,11 @@ export default function MasterCharactersPage() {
         <section>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-accent">NPCs</h2>
+            {deleteSuccessMessage && (
+              <div className="ml-4 p-2 bg-green-600 text-white text-sm rounded-md">
+                {deleteSuccessMessage}
+              </div>
+            )}
           </div>
 
           {npcs.length === 0 ? (
@@ -359,7 +388,6 @@ export default function MasterCharactersPage() {
               type="text"
               value={newCharacterId}
               onChange={(e) => {
-                // Só números, até 3 dígitos
                 const val = e.target.value.replace(/\D/g, '').slice(0, 3)
                 setNewCharacterId(val)
               }}

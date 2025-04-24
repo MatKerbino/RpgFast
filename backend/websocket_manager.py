@@ -104,4 +104,33 @@ class ConnectionManager:
     async def broadcast_shared_abilities(self):
         from .app_setup import datetime_serializer
         abilities = await self.db.get_shared_abilities()
-        await self.broadcast(json.dumps({"type": "shared_abilities", "data": abilities}, default=datetime_serializer)) 
+        await self.broadcast(json.dumps({"type": "shared_abilities", "data": abilities}, default=datetime_serializer))
+
+    async def broadcast_npcs(self, master_id: str):
+        """Envia a lista atualizada de NPCs especificamente para o mestre conectado."""
+        from .app_setup import datetime_serializer # Importar serializer
+        import logging
+        logger = logging.getLogger(__name__)
+
+        websocket = self.active_connections.get(master_id)
+        if not websocket:
+            logger.warning(f"Attempted to broadcast NPCs to disconnected master: {master_id}")
+            return
+
+        try:
+            npcs_list = await self.db.get_npcs(master_id)
+            # Ensure createdAt is serialized if present in npc data
+            serialized_npcs = []
+            for npc in npcs_list:
+                npc_copy = npc.copy()
+                if 'createdAt' in npc_copy and isinstance(npc_copy['createdAt'], datetime):
+                     npc_copy['createdAt'] = npc_copy['createdAt'].isoformat()
+                # Remove original potentially non-serializable field if necessary
+                npc_copy.pop('created_at', None)
+                serialized_npcs.append(npc_copy)
+
+            message = json.dumps({"type": "npcs", "data": serialized_npcs}, default=datetime_serializer)
+            await self.send_personal_message(message, master_id)
+            logger.debug(f"Sent NPC update to master {master_id}")
+        except Exception as e:
+            logger.error(f"Error broadcasting NPCs to master {master_id}: {e}", exc_info=True) 

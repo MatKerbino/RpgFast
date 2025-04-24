@@ -12,8 +12,8 @@ export default function CharacterBar({ characters, currentUser, onRollDice }) {
   })
 
   return (
-    <header className="sticky top-0 z-20 bg-card border-b border-border p-2 overflow-x-auto shadow-md">
-      <div className="flex space-x-2 min-w-max">
+    <header className="sticky top-0 z-20 bg-card border-b border-border p-2 overflow-x-auto shadow-md bg-black">
+      <div className="flex space-x-2 min-w-max bg-black">
         {sortedCharacters.map((character) => (
           <CharacterCard
             key={character.id}

@@ -16,10 +16,12 @@ async def create_npc(master_id: str, npc_data: dict):
     npc_id = f"npc-{uuid.uuid4()}"
     await db.create_npc(npc_id, master_id, npc_data)
 
-    # Return all NPCs for the master, including the new one
-    npcs = await db.get_npcs(master_id)
-    # Optional: Broadcast NPC list update to the master via websocket
-    return npcs
+    # Broadcast the updated NPC list only to the master
+    await manager.broadcast_npcs(master_id)
+
+    # Return the created NPC (or just success)
+    npc_data['id'] = npc_id # Include ID in response if needed
+    return {"success": True, "npc": npc_data}
 
 @router.get("/npcs/{master_id}", tags=["NPCs"])
 async def get_npcs(master_id: str):

@@ -33,8 +33,8 @@ class Database:
                     is_master BOOLEAN NOT NULL DEFAULT FALSE,
                     character_id TEXT UNIQUE,
                     master_code TEXT,
-                    health_points INTEGER NOT NULL DEFAULT 100,
-                    max_health_points INTEGER NOT NULL DEFAULT 100,
+                    health_points INTEGER NOT NULL DEFAULT 10,
+                    max_health_points INTEGER NOT NULL DEFAULT 10,
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
@@ -138,8 +138,8 @@ class Database:
                     id TEXT PRIMARY KEY,
                     master_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                     nickname TEXT NOT NULL,
-                    health_points INTEGER NOT NULL DEFAULT 100,
-                    max_health_points INTEGER NOT NULL DEFAULT 100,
+                    health_points INTEGER NOT NULL DEFAULT 10,
+                    max_health_points INTEGER NOT NULL DEFAULT 10,
                     show_health_bar BOOLEAN NOT NULL DEFAULT TRUE,
                     health_bar_color TEXT DEFAULT 'green',
                     show_in_chat BOOLEAN NOT NULL DEFAULT FALSE,
@@ -275,27 +275,54 @@ class Database:
                 )
 
     async def get_users(self):
+        """Fetches all users and NPCs marked as 'showInChat=True'"""
         async with self.pool.acquire() as conn:
-            users = await conn.fetch('SELECT * FROM users')
-            result = []
-            
-            for user in users:
+            # Fetch users
+            users_query = 'SELECT * FROM users'
+            users_records = await conn.fetch(users_query)
+
+            # Fetch NPCs marked as visible
+            npcs_query = 'SELECT * FROM npcs WHERE show_in_chat = TRUE'
+            npcs_records = await conn.fetch(npcs_query)
+
+            result = [] # Combined list
+
+            # Process users
+            for user in users_records:
                 # Obter resultados de dados
                 dice_results = await conn.fetch(
+                    # Limit dice results fetched per user for performance
                     'SELECT result FROM dice_results WHERE user_id = $1 ORDER BY timestamp DESC LIMIT 3',
                     user['id']
                 )
-                
+
                 user_data = dict(user)
                 user_data['diceResults'] = [r['result'] for r in dice_results]
                 user_data['isMaster'] = user_data.pop('is_master', False)
-                user_data['healthPoints'] = user_data.pop('health_points', 100)
-                user_data['maxHealthPoints'] = user_data.pop('max_health_points', 100)
+                user_data['healthPoints'] = user_data.get('health_points', 10) # Use get to avoid popping non-existent keys sometimes
+                user_data['maxHealthPoints'] = user_data.get('max_health_points', 10)
                 user_data['characterId'] = user_data.pop('character_id', None)
                 user_data['createdAt'] = user_data.pop('created_at')
-                
+                user_data['isNpc'] = False # Explicitly mark as not NPC
+
                 result.append(user_data)
-                
+
+            # Process visible NPCs
+            for npc in npcs_records:
+                npc_data = dict(npc)
+                npc_data['isNpc'] = True
+                npc_data['isMaster'] = False # NPCs are not masters
+                npc_data['healthPoints'] = npc_data.pop('health_points', 10)
+                npc_data['maxHealthPoints'] = npc_data.pop('max_health_points', 10)
+                npc_data['showHealthBar'] = npc_data.pop('show_health_bar', True)
+                npc_data['healthBarColor'] = npc_data.pop('health_bar_color', 'green')
+                npc_data['showInChat'] = npc_data.pop('show_in_chat', True) # Should be true here
+                npc_data['masterId'] = npc_data.pop('master_id', None) # Keep masterId if needed frontend
+                npc_data['diceResults'] = [] # NPCs don't have dice history in this structure
+                # Add other fields if needed by CharacterCard, ensure consistency
+
+                result.append(npc_data)
+
             return result
 
     async def get_user(self, user_id):
@@ -314,8 +341,8 @@ class Database:
             user_data = dict(user)
             user_data['diceResults'] = [r['result'] for r in dice_results]
             user_data['isMaster'] = user_data.pop('is_master', False)
-            user_data['healthPoints'] = user_data.pop('health_points', 100)
-            user_data['maxHealthPoints'] = user_data.pop('max_health_points', 100)
+            user_data['healthPoints'] = user_data.pop('health_points', 10)
+            user_data['maxHealthPoints'] = user_data.pop('max_health_points', 10)
             user_data['characterId'] = user_data.pop('character_id', None)
             user_data['createdAt'] = user_data.pop('created_at')
             
@@ -850,3 +877,19 @@ class Database:
                 'INSERT INTO abilities (id, user_id, name, description) VALUES ($1, $2, $3, $4)',
                 ability_data['id'], user_id, ability_data['name'], ability_data['description']
             )
+
+    # --- Método para deletar usuário --- START ---
+    async def delete_user(self, user_id):
+        """Deleta um usuário e todos os seus dados relacionados (personagem, etc.)"""
+        async with self.pool.acquire() as conn:
+            # O ON DELETE CASCADE nas foreign keys deve cuidar das tabelas relacionadas
+            # como attributes, skills, abilities, inventory, currency, messages, dice_results.
+            # Se não houver CASCADE, você precisaria deletar manualmente dessas tabelas primeiro.
+            result = await conn.execute(
+                'DELETE FROM users WHERE id = $1',
+                user_id
+            )
+            # O execute retorna uma string como 'DELETE 1' ou 'DELETE 0'
+            deleted_count = int(result.split(' ')[1])
+            return deleted_count > 0 # Retorna True se deletou 1 linha, False caso contrário
+    # --- Método para deletar usuário --- END ---

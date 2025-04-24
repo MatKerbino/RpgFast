@@ -20,7 +20,7 @@ async def generate_unique_character_id():
             return char_id
 
 @router.post("/master/characters", tags=["Master Actions", "Users & Characters"])
-async def master_create_character(master_id: str = Body(...), nickname: str = Body(...)):
+async def master_create_character(master_id: str = Body(...), nickname: str = Body(...), character_id: str = Body(...)):
     """Endpoint para o mestre criar um novo personagem jogador."""
     # 1. Verificar se quem requisita é o mestre
     master_user = await db.get_user(master_id)
@@ -29,9 +29,6 @@ async def master_create_character(master_id: str = Body(...), nickname: str = Bo
 
     if not nickname:
         raise HTTPException(status_code=400, detail="Nickname is required for the new character.")
-
-    # 2. Gerar um ID de personagem único
-    character_id = await generate_unique_character_id()
 
     # 3. Criar o novo usuário/personagem
     new_user_id = str(uuid.uuid4())
@@ -48,6 +45,37 @@ async def master_create_character(master_id: str = Body(...), nickname: str = Bo
     # 6. Retornar os dados do novo personagem
     # Incluindo o character_id aqui, pois a resposta é para o mestre
     return {"user": new_user_data, "success": True}
+
+@router.delete("/master/characters/{character_id}", tags=["Master Actions", "Users & Characters"])
+async def master_delete_character(character_id: str, master_id: str = Body(...)):
+    """Endpoint para o mestre deletar um personagem jogador."""
+    # 1. Verificar se quem requisita é o mestre
+    master_user = await db.get_user(master_id)
+    if not master_user or not master_user.get("isMaster"):
+        raise HTTPException(status_code=403, detail="Only the master can delete characters.")
+
+    # 2. Encontrar o usuário pelo character_id
+    target_user_data = await db.get_character_by_id(character_id)
+    if not target_user_data:
+        raise HTTPException(status_code=404, detail=f"Character with ID {character_id} not found.")
+
+    # 3. Obter o user_id do personagem a ser deletado
+    user_id_to_delete = target_user_data.get("userId")
+    if not user_id_to_delete:
+         raise HTTPException(status_code=500, detail=f"Could not determine user ID for character {character_id}.")
+
+    # 4. Deletar o usuário (assumindo que a função delete_user existe no db)
+    deleted = await db.delete_user(user_id_to_delete)
+    if not deleted:
+        # Pode acontecer se o usuário foi deletado entre a verificação e a exclusão,
+        # ou se houve um erro na exclusão.
+        raise HTTPException(status_code=500, detail=f"Failed to delete user {user_id_to_delete}.")
+
+    # 5. Broadcast da lista de usuários atualizada
+    await manager.broadcast_users()
+
+    # 6. Retornar sucesso
+    return {"success": True}
 
 @router.get("/users", tags=["Users & Characters"])
 async def get_users():

@@ -66,12 +66,12 @@ export default function GameRoom() {
       />
 
       {/* Chat area - Scrollable */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden pb-32">
         <ChatContainer messages={messages} currentUser={currentUser} users={users} npcs={npcs} />
       </div>
 
       {/* Message input - Fixed above navigation */}
-      <div className="border-t border-border bg-background">
+      <div className="border-t border-border bg-background fixed bottom-0 w-full">
         <MessageInput onSendMessage={handleSendMessage} onOpenDiceModal={() => setShowDiceModal(true)} />
 
         {/* Navigation */}
@@ -98,7 +98,7 @@ export default function GameRoom() {
 
       {/* Dice rolling modal */}
       <Modal isOpen={showDiceModal} onClose={() => setShowDiceModal(false)} title="Rolar Dados">
-        <div className="space-y-4">
+        <div className="space-y-4 bg-black">
           <div className="grid grid-cols-3 gap-2">
             {["d20", "d12", "d10", "d8", "d6", "d4"].map((dice) => (
               <button
