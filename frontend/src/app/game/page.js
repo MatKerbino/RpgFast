@@ -53,8 +53,8 @@ export default function GameRoom() {
     setCustomDice("")
   }
 
-  // Combinar usuários e NPCs para exibição
-  const allCharacters = [...users, ...npcs.filter((npc) => npc.showInChat)]
+  // Usar diretamente o estado 'users' que já contém jogadores e NPCs visíveis
+  const allCharacters = users
 
   return (
     <main className="min-h-screen flex flex-col bg-background">

@@ -113,24 +113,24 @@ async def login(request_data: LoginRequest = Body(...)):
 
     if not nickname:
         return {"success": False, "error": "Nickname is required"}
-
+    
     # Verificar se é um login de mestre
     is_master = master_code == MASTER_CODE
-
+    
     if is_master:
-        # Verificar se já existe um mestre
+    # Verificar se já existe um mestre
         users = await db.get_users()
         for user in users:
             if user.get("isMaster", True):
                 return {"success": True, "user": user}
-
+    
         # Criar novo usuário mestre
         user_id = str(uuid.uuid4())
         await db.create_user(user_id, nickname, is_master)
-
+    
         # Obter o usuário criado
         user = await db.get_user(user_id)
-
+    
         return {"user": user, "success": True}
     else:
         # Login de jogador com ID de personagem

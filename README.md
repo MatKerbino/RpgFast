@@ -145,7 +145,7 @@ RpgFast/
 
 1. Fork no GitHub  
 2. Criar branch feature:  
-   ```bash
+  ```bash
    git checkout -b feature/nome-da-sua-feature
    ```
 3. Code, commit, push  

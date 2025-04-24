@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException, Body, Depends
 from typing import Dict, Any
 import random
 import string
@@ -47,34 +47,30 @@ async def master_create_character(master_id: str = Body(...), nickname: str = Bo
     return {"user": new_user_data, "success": True}
 
 @router.delete("/master/characters/{character_id}", tags=["Master Actions", "Users & Characters"])
-async def master_delete_character(character_id: str, master_id: str = Body(...)):
+async def master_delete_character(character_id: str):
     """Endpoint para o mestre deletar um personagem jogador."""
-    # 1. Verificar se quem requisita é o mestre
-    master_user = await db.get_user(master_id)
-    if not master_user or not master_user.get("isMaster"):
-        raise HTTPException(status_code=403, detail="Only the master can delete characters.")
-
-    # 2. Encontrar o usuário pelo character_id
+    
+    # Encontrar o usuário pelo character_id
     target_user_data = await db.get_character_by_id(character_id)
     if not target_user_data:
         raise HTTPException(status_code=404, detail=f"Character with ID {character_id} not found.")
 
-    # 3. Obter o user_id do personagem a ser deletado
+    # Obter o user_id do personagem a ser deletado
     user_id_to_delete = target_user_data.get("userId")
     if not user_id_to_delete:
          raise HTTPException(status_code=500, detail=f"Could not determine user ID for character {character_id}.")
 
-    # 4. Deletar o usuário (assumindo que a função delete_user existe no db)
+    # Deletar o usuário (assumindo que a função delete_user existe no db)
     deleted = await db.delete_user(user_id_to_delete)
     if not deleted:
         # Pode acontecer se o usuário foi deletado entre a verificação e a exclusão,
         # ou se houve um erro na exclusão.
         raise HTTPException(status_code=500, detail=f"Failed to delete user {user_id_to_delete}.")
 
-    # 5. Broadcast da lista de usuários atualizada
+    # Broadcast da lista de usuários atualizada
     await manager.broadcast_users()
 
-    # 6. Retornar sucesso
+    # Retornar sucesso
     return {"success": True}
 
 @router.get("/users", tags=["Users & Characters"])

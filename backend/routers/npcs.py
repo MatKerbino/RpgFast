@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status, Response
 import uuid
 
 # Import necessary components from app_setup
@@ -41,9 +41,15 @@ async def update_npc(npc_id: str, npc_data: dict):
     # Optional: Broadcast NPC update to the master via websocket
     return {"success": True}
 
-@router.delete("/npcs/{npc_id}", tags=["NPCs"])
+@router.delete("/npcs/{npc_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["NPCs"])
 async def delete_npc(npc_id: str):
     # Optional: Add validation to check if the requesting user is the master owner of the NPC
-    await db.delete_npc(npc_id)
+    deleted = await db.delete_npc(npc_id)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="NPC not found")
     # Optional: Broadcast NPC deletion to the master via websocket
-    return {"success": True} 
+    # TODO: Get master_id associated with npc_id to broadcast update
+    # master_id = await db.get_npc_master(npc_id) # Example function needed in db
+    # if master_id:
+    #     await manager.broadcast_npcs(master_id)
+    return # Implicitly returns None, FastAPI handles the 204 response based on the decorator 

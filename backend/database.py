@@ -723,7 +723,11 @@ class Database:
 
     async def delete_npc(self, npc_id):
         async with self.pool.acquire() as conn:
-            await conn.execute('DELETE FROM npcs WHERE id = $1', npc_id)
+            # O ON DELETE CASCADE nas foreign keys deve cuidar das tabelas relacionadas (npc_attributes, etc.)
+            result = await conn.execute('DELETE FROM npcs WHERE id = $1', npc_id)
+            # O execute retorna uma string como 'DELETE 1' ou 'DELETE 0'
+            deleted_count = int(result.split(' ')[1])
+            return deleted_count > 0 # Retorna True se deletou 1 linha, False caso contrário
 
     # Métodos para itens compartilhados
     async def create_shared_item(self, item_id, master_id, item_data):

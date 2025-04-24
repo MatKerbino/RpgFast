@@ -117,15 +117,12 @@ export function AppProvider({ children }) {
     if (!currentUser || !currentUser.isMaster) {
       throw new Error("Apenas o mestre pode criar personagens")
     }
-
     try {
-      // Use axios for the POST request
       const response = await axios.post(`${API_URL}/api/master/characters`, {
         master_id: currentUser.id,
         nickname: nickname,
         character_id: id
       });
-
       const data = response.data;
       return data
     } catch (error) {
@@ -140,14 +137,22 @@ export function AppProvider({ children }) {
       throw new Error("Apenas o mestre pode excluir personagens")
     }
 
+    console.log("Contexto recebeu ID para deletar:", id, "Tipo:", typeof id); // Debug log
+
     try {
-      const response = await axios.delete(`${API_URL}/api/master/characters/${id}`, {
-        master_id: currentUser.id
-      });
+      // Correção: Remover o corpo da requisição (segundo argumento)
+      const response = await axios.delete(`${API_URL}/api/master/characters/${id}`);
+      
       const data = response.data;
       return data
     } catch (error) {
       console.error("Error deleting character:", error)
+      // Log a resposta de erro completa se disponível
+      if (error.response) {
+        console.error('Error Response Data:', error.response.data);
+        console.error('Error Response Status:', error.response.status);
+        console.error('Error Response Headers:', error.response.headers);
+      }
       const errorMessage = error.response?.data?.detail || error.message || "Falha ao deletar personagem"
       throw new Error(errorMessage)
     }

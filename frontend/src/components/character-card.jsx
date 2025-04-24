@@ -33,7 +33,7 @@ export default function CharacterCard({ character, isMaster, onEdit, onViewDetai
               </button>
               
               <button
-                onClick={() => onDelete(character.id)}
+                onClick={() => onDelete(character)}
                 className="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-500 px-2 py-1 rounded"
               >
                 Excluir

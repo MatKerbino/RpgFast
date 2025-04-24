@@ -110,14 +110,14 @@ export default function MasterCharactersPage() {
   }
 
   const handleDeleteCharacter = async (character) => {
-    if (!window.confirm(`Deseja realmente deletar o personagem "${character.nickname}" (ID: ${character.characterId})?`)) {
+    if (!window.confirm(`Deseja realmente deletar o personagem "${character.nickname}"`)) {
       return;
     }
 
     try {
       await deleteCharacter(character.characterId);
 
-      setDeleteSuccessMessage(`Personagem "${character.nickname}" (ID: ${character.characterId}) deletado com sucesso!`);
+      setDeleteSuccessMessage(`Personagem "${character.nickname}") deletado com sucesso!`);
 
       setTimeout(() => setDeleteSuccessMessage(""), 3000);
 
@@ -125,6 +125,20 @@ export default function MasterCharactersPage() {
       console.error("Erro ao deletar personagem:", error);
       alert(`Falha ao excluir personagem: ${error.message}`);
     }
+  }
+
+  const handleDeleteNpc = async (npc) => {
+      if (window.confirm(`Deseja realmente deletar o NPC "${npc.nickname}"?`)) {
+        try {
+          await deleteNpc(npc.id)
+          setDeleteSuccessMessage(`Personagem "${npc.nickname}") deletado com sucesso!`);
+          setTimeout(() => setDeleteSuccessMessage(""), 3000);
+        } catch(error) {
+          console.error("Erro ao deletar NPC:", error);
+          alert(`Falha ao excluir NPC: ${error.message}`);
+        };
+      }
+      return
   }
 
   const handleViewCharacterDetails = async (character) => {
@@ -246,8 +260,8 @@ export default function MasterCharactersPage() {
     }
   }
 
-  // Filtrar jogadores (excluindo o mestre)
-  const playerCharacters = users.filter((user) => !user.isMaster)
+  // Filtrar jogadores (excluindo o mestre E NPCs)
+  const playerCharacters = users.filter((user) => !user.isMaster && !user.isNpc)
 
   return (
     <main className="min-h-screen flex flex-col bg-background pb-20">
@@ -330,7 +344,7 @@ export default function MasterCharactersPage() {
                   onEdit={handleEditCharacter}
                   onViewDetails={handleViewCharacterDetails}
                   onRollDice={handleRollDiceForNpc}
-                  onDelete={deleteNpc}
+                  onDelete={handleDeleteNpc}
                 />
               ))}
             </div>
