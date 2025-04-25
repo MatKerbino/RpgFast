@@ -158,6 +158,25 @@ export function AppProvider({ children }) {
     }
   }
 
+  const getCharacterData = async (id) => {
+    if (!currentUser || !currentUser.isMaster){
+      throw new Error("Apenas o mestre pode ver detalhes dos personagens!")
+    }
+  }
+
+  const getCharacterDetails = async (characterId) => {
+    if (!currentUser || !currentUser.isMaster) {
+       throw new Error("Apenas o mestre pode ver detalhes dos personagens!");
+    }
+    try {
+      const response = await axios.get(`${API_URL}/api/character/${characterId}`);
+      return response.data; 
+    } catch (error) {
+      console.error(`Error fetching details for character ${characterId}:`, error);
+      throw error; 
+    }
+  }
+
   const sendMessage = async (content) => {
     if (!currentUser || !socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) return
 
@@ -471,6 +490,7 @@ export function AppProvider({ children }) {
     login,
     createCharacter,
     deleteCharacter,
+    getCharacterDetails,
     sendMessage,
     rollDice,
     updateCharacter,

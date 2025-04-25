@@ -99,11 +99,13 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                 await manager.broadcast_users() # Update dice history display
 
             elif message_type == "update_character" and isinstance(message_data.get("data"), dict):
-                # Allow users to update their own character via websocket
                 character_data = message_data["data"]
                 logger.info(f"WebSocket: Updating character {user_id}")
+                current_user = await db.get_user(user_id) # Fetch current user data for defaults
+                if not current_user:
+                    logger.warning(f"WebSocket: User {user_id} not found during update_character.")
+                    continue # Skip if user somehow disappeared
 
-                # Call specific update functions based on received data
                 try:
                     if "attributes" in character_data:
                         await db.update_character_attributes(user_id, character_data["attributes"])
@@ -116,16 +118,40 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                     if "currency" in character_data:
                         await db.update_character_currency(user_id, character_data["currency"])
 
-                    # Send updated character back to the specific client
+                    # --- Adicionar atualização de Vida --- START ---
+                    health_updated = False
+                    if "maxHealthPoints" in character_data:
+                        max_hp = max(1, character_data["maxHealthPoints"])
+                        await db.update_user_max_health(user_id, max_hp)
+                        health_updated = True
+                    else:
+                         # Use current max HP if not being updated
+                        max_hp = current_user.get("maxHealthPoints", 10)
+                    
+                    if "healthPoints" in character_data:
+                        hp = min(max(0, character_data["healthPoints"]), max_hp)
+                        await db.update_user_health(user_id, hp)
+                        health_updated = True
+                    elif health_updated: # If only maxHP was updated, check if current HP exceeds new max
+                        current_hp = current_user.get("healthPoints", 10)
+                        if current_hp > max_hp:
+                             await db.update_user_health(user_id, max_hp)
+                             health_updated = True # Technically updated
+                    # --- Adicionar atualização de Vida --- END ---
+
                     updated_character = await db.get_character(user_id)
                     if updated_character:
                         await websocket.send_text(json.dumps({"type": "character", "data": updated_character}, default=datetime_serializer))
                     else:
                          logger.warning(f"WebSocket: Character {user_id} not found after update attempt.")
+                    
+                    # --- Adicionar Broadcast após atualização de vida ---        
+                    if health_updated:
+                        await manager.broadcast_users()
+                    # --- Fim do Broadcast ---
+                         
                 except Exception as e:
                     logger.error(f"WebSocket: Error updating character {user_id}: {e}", exc_info=True)
-                    # Optionally send an error message back to the client
-                    # await websocket.send_text(json.dumps({"type": "error", "message": "Failed to update character data."}))
 
             elif message_type == "update_health" and current_user.get("isMaster"):
                 target_id = message_data.get("userId")

@@ -21,6 +21,7 @@ export default function CharacterPage() {
 
   const [localCharacter, setLocalCharacter] = useState(character)
   const router = useRouter()
+  const [debounceTimeout, setDebounceTimeout] = useState(null); // State for debounce timer
 
   // Modais de edição
   const [showAttributesModal, setShowAttributesModal] = useState(false)
@@ -278,6 +279,46 @@ export default function CharacterPage() {
     setShowSharedAbilitiesModal(false)
   }
 
+  // --- START: Health Handling ---
+  const handleHealthChange = (field, value) => {
+    if (!localCharacter) return;
+
+    let numericValue = parseInt(value, 10) || 0;
+    let updatedData = {};
+
+    if (field === 'healthPoints') {
+      // Garante 0 <= hp <= maxHp
+      const maxHp = localCharacter.maxHealthPoints ?? 10;
+      numericValue = Math.min(Math.max(0, numericValue), maxHp);
+      updatedData = { healthPoints: numericValue };
+    } else if (field === 'maxHealthPoints') {
+      numericValue = Math.max(1, numericValue); // Max HP >= 1
+      updatedData = { maxHealthPoints: numericValue };
+      // Ajustar HP atual se exceder o novo máximo
+      if (localCharacter.healthPoints > numericValue) {
+        updatedData.healthPoints = numericValue;
+      }
+    }
+
+    const updatedCharacter = {
+      ...localCharacter,
+      ...updatedData,
+    };
+
+    setLocalCharacter(updatedCharacter); // Atualiza UI imediatamente
+
+    // Debounce para salvar
+    if (debounceTimeout) {
+      clearTimeout(debounceTimeout);
+    }
+    setDebounceTimeout(
+      setTimeout(() => {
+        updateCharacter({ id: currentUser.id, ...updatedData }); // Envia apenas o que mudou
+      }, 750) // Atraso de 750ms
+    );
+  };
+  // --- END: Health Handling ---
+
   return (
     <main className="min-h-screen flex flex-col bg-background">
       <header className="bg-card border-b border-border p-4 sticky top-0 z-10 shadow-md">
@@ -286,6 +327,42 @@ export default function CharacterPage() {
       </header>
 
       <div className="flex-1 overflow-y-auto p-4 pb-20">
+        {/* --- START: Health Section --- */}
+        <section className="mb-6">
+          <h2 className="text-xl font-bold text-accent mb-3">Pontos de Vida</h2>
+          <div className="bg-card border border-border rounded-lg p-4 flex items-center space-x-4">
+             <div className="flex-1">
+                <label htmlFor="currentHP" className="block text-sm font-medium mb-1 text-foreground/80">
+                  Vida Atual
+                </label>
+                <input
+                  id="currentHP"
+                  type="number"
+                  value={localCharacter.healthPoints ?? 10}
+                  onChange={(e) => handleHealthChange('healthPoints', e.target.value)}
+                  max={localCharacter.maxHealthPoints ?? 10}
+                  min="0"
+                  className="w-full px-3 py-2 rounded-md bg-background border border-border focus:outline-none focus:ring-1 focus:ring-accent text-foreground text-lg font-semibold"
+                />
+              </div>
+              <span className="text-2xl text-foreground/50 mt-6">/</span>
+              <div className="flex-1">
+                <label htmlFor="maxHP" className="block text-sm font-medium mb-1 text-foreground/80">
+                  Vida Máxima
+                </label>
+                <input
+                  id="maxHP"
+                  type="number"
+                  value={localCharacter.maxHealthPoints ?? 10}
+                  onChange={(e) => handleHealthChange('maxHealthPoints', e.target.value)}
+                  min="1"
+                  className="w-full px-3 py-2 rounded-md bg-background border border-border focus:outline-none focus:ring-1 focus:ring-accent text-foreground text-lg font-semibold"
+                />
+              </div>
+           </div>
+        </section>
+        {/* --- END: Health Section --- */}
+
         {/* Attributes Section */}
         <section className="mb-6">
           <div className="flex justify-between items-center mb-3">

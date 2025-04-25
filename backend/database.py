@@ -374,6 +374,14 @@ class Database:
                 health_points, user_id
             )
 
+    async def update_user_max_health(self, user_id, max_health_points):
+        """Atualiza os pontos de vida máximos de um usuário."""
+        async with self.pool.acquire() as conn:
+            await conn.execute(
+                'UPDATE users SET max_health_points = $1 WHERE id = $2',
+                max_health_points, user_id
+            )
+
     # Métodos para mensagens
     async def create_message(self, message_id, user_id, nickname, content, is_dice_roll=False, dice_type=None, dice_result=None):
         async with self.pool.acquire() as conn:

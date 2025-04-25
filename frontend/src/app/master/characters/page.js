@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useApp } from "@/lib/context"
 import Link from "next/link"
@@ -29,7 +29,8 @@ export default function MasterCharactersPage() {
     updateNpc,
     deleteNpc,
     createCharacter,
-    deleteCharacter
+    deleteCharacter,
+    getCharacterDetails,
   } = useApp()
 
   const [selectedCharacter, setSelectedCharacter] = useState(null)
@@ -41,6 +42,7 @@ export default function MasterCharactersPage() {
   const [showAddAbilityModal, setShowAddAbilityModal] = useState(false)
   const [editedCharacter, setEditedCharacter] = useState(null)
   const [characterDetails, setCharacterDetails] = useState(null)
+  const [editingCharacterDetails, setEditingCharacterDetails] = useState(null)
   const [newCharacterName, setNewCharacterName] = useState("")
   const [newCharacterId, setNewCharacterId] = useState("")
   const [createCharacterError, setCreateCharacterError] = useState("")
@@ -103,8 +105,8 @@ export default function MasterCharactersPage() {
     setSelectedCharacter(character)
     setEditedCharacter({
       ...character,
-      healthPoints: character.healthPoints || 100,
-      maxHealthPoints: character.maxHealthPoints || 100,
+      healthPoints: character.healthPoints ?? 10,
+      maxHealthPoints: character.maxHealthPoints ?? 10,
     })
     setShowEditModal(true)
   }
@@ -142,44 +144,44 @@ export default function MasterCharactersPage() {
   }
 
   const handleViewCharacterDetails = async (character) => {
-    try {
-      // Use axios.get to fetch character details
-      const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/character/${character.id}`);
-
-      // Axios provides data directly in response.data
-      const data = response.data;
-
-      setCharacterDetails({
-        ...data,
-        nickname: character.nickname,
-        id: character.id,
-        isNpc: character.isNpc, // Assume isNpc comes from the character object passed in
-      });
+    if (character.isNpc) {
+      setCharacterDetails(character);
+      setEditingCharacterDetails(character);
       setShowCharacterDetailsModal(true);
+      return;
+    }
 
+    try {
+      const data = await getCharacterDetails(character.id);
+      const details = { ...data, isNpc: false, id: character.id, nickname: character.nickname };
+      setCharacterDetails(details);
+      setEditingCharacterDetails(details);
+      setShowCharacterDetailsModal(true);
     } catch (error) {
       console.error("Error fetching character details:", error);
-      // Check if the error is a 404 (Not Found) specifically
-      if (error.response && error.response.status === 404) {
-         // If character not found on server (like for NPCs), use local data
-         if (character.isNpc) {
-           setCharacterDetails(character);
-           setShowCharacterDetailsModal(true);
-         } else {
-           alert("Erro: Personagem não encontrado no servidor.");
-         }
-      } else {
-        // Handle other potential errors
-        alert("Erro ao carregar detalhes do personagem.");
-      }
-
-      // Fallback to local data for NPCs even on other errors might be needed depending on desired logic
-      // if (character.isNpc) {
-      //   setCharacterDetails(character)
-      //   setShowCharacterDetailsModal(true)
-      // }
+      alert(`Erro ao carregar detalhes do personagem: ${error.message || "Erro desconhecido"}`);
     }
   }
+
+  const handleDetailsChange = useCallback((updatedDetails) => {
+    setEditingCharacterDetails(updatedDetails);
+  }, []);
+
+  const handleSaveChanges = async () => {
+    if (!editingCharacterDetails) return;
+
+    try {
+      setIsLoading(true);
+      await updateCharacter(editingCharacterDetails);
+      setCharacterDetails(editingCharacterDetails);
+      setShowCharacterDetailsModal(false);
+    } catch (error) {
+      console.error("Error saving character details:", error);
+      alert(`Erro ao salvar alterações: ${error.message || "Erro desconhecido"}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSaveCharacter = async () => {
     if (!editedCharacter) return
@@ -740,25 +742,45 @@ export default function MasterCharactersPage() {
       {/* Character Details Modal */}
       <Modal
         isOpen={showCharacterDetailsModal}
-        onClose={() => setShowCharacterDetailsModal(false)}
+        onClose={() => {
+          setShowCharacterDetailsModal(false);
+          setCharacterDetails(null);
+          setEditingCharacterDetails(null);
+        }}
         title={`Detalhes de ${characterDetails?.nickname || "Personagem"}`}
       >
-        {characterDetails && (
+        {editingCharacterDetails && (
           <>
             <CharacterDetails
-              character={characterDetails}
+              character={editingCharacterDetails}
+              onCharacterChange={handleDetailsChange}
               onAddItem={() => setShowAddItemModal(true)}
               onAddAbility={() => setShowAddAbilityModal(true)}
             />
-            <div className="flex justify-end pt-4">
+            <div className="flex justify-end space-x-2 pt-4 border-t border-border mt-4">
               <button
-                onClick={() => setShowCharacterDetailsModal(false)}
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+                onClick={() => {
+                  setShowCharacterDetailsModal(false);
+                  setCharacterDetails(null);
+                  setEditingCharacterDetails(null);
+                }}
+                className="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600"
+                disabled={isLoading}
               >
-                Fechar
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveChanges}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
+                disabled={isLoading}
+              >
+                {isLoading ? "Salvando..." : "Salvar Alterações"}
               </button>
             </div>
           </>
+        )}
+        {!editingCharacterDetails && isLoading && (
+          <div className="text-center p-4">Carregando detalhes...</div>
         )}
       </Modal>
 
